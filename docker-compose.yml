@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  multi-repo-proxy:
+    build: .
+    container_name: multi-repo-proxy
+    ports:
+      - "9080:80"
+      - "9443:443"
+    restart: unless-stopped

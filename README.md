@@ -17,7 +17,7 @@ No manual configuration needed per repository!
 sudo sh -c 'echo "127.0.0.1 repos.devopsnerds.com" >> /etc/hosts'
 ```
 
-2. Generate SSL certificate:
+2. Generate SSL certificate (if not already present):
 ```bash
 mkdir -p ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout ssl/nginx.key -out ssl/nginx.crt \
@@ -25,6 +25,11 @@ mkdir -p ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 ```
 
 3. Run:
+```bash
+docker-compose up -d
+```
+
+Or without docker-compose:
 ```bash
 docker build -t multi-repo-proxy .
 docker run -d -p 9080:80 -p 9443:443 --name multi-repo-proxy multi-repo-proxy

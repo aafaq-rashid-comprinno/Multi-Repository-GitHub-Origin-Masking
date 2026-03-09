@@ -1,12 +1,14 @@
 # Multi-Repository GitHub Origin Masking
 
 **Domain:** repos.devopsnerds.com  
-**Objective:** Mask multiple GitHub repositories behind single custom domain using path-based routing
+**Objective:** Automatically expose ALL repositories from a GitHub user/organization behind a custom domain
 
-## Repositories
+## Dynamic Routing
 
-- `/aws-creds-manager` → https://github.com/aafaq-rashid-comprinno/aws-creds-manager
-- `/mongo` → https://github.com/aafaq-rashid-comprinno/mongo
+All repositories from `aafaq-rashid-comprinno` are automatically accessible:
+- `https://repos.devopsnerds.com/<any-repo-name>`
+
+No manual configuration needed per repository!
 
 ## Setup
 
@@ -30,48 +32,38 @@ docker run -d -p 9080:80 -p 9443:443 --name multi-repo-proxy multi-repo-proxy
 
 ## Access
 
+**Important:** GitHub requires authentication for git operations over HTTPS, even for public repositories. You need to provide credentials when cloning.
+
+**Git Clone with Authentication:**
+```bash
+# Option 1: Inline credentials (not recommended for production)
+git -c http.sslVerify=false clone https://USERNAME:TOKEN@repos.devopsnerds.com:9443/<repo-name>.git
+
+# Option 2: Use credential helper (recommended)
+git config --global credential.helper store
+git -c http.sslVerify=false clone https://repos.devopsnerds.com:9443/<repo-name>.git
+# Enter your GitHub username and personal access token when prompted
+```
+
 **Web Browser:**
-- https://repos.devopsnerds.com:9443/aws-creds-manager
-- https://repos.devopsnerds.com:9443/mongo
+- https://repos.devopsnerds.com:9443/<any-repo-name>
 
-**Git Clone:**
+Examples:
 ```bash
-git -c http.sslVerify=false clone https://repos.devopsnerds.com:9443/aws-creds-manager
-git -c http.sslVerify=false clone https://repos.devopsnerds.com:9443/mongo
+# With GitHub personal access token
+git -c http.sslVerify=false clone https://your-github-username:ghp_yourtoken@repos.devopsnerds.com:9443/aws-creds-manager.git
 ```
 
-(Self-signed certificate - disable SSL verification for testing)
+## Change GitHub User/Organization
 
-## Add New Repository
-
-1. Edit `nginx.conf` and add new location block:
+Edit `nginx.conf` and change the username in the proxy_pass line:
 ```nginx
-location /new-repo {
-    proxy_pass https://github.com/username/new-repo;
-    proxy_ssl_server_name on;
-    proxy_set_header Host github.com;
-    proxy_set_header X-Forwarded-Proto https;
-    
-    sub_filter 'github.com/username/new-repo' 'repos.devopsnerds.com/new-repo';
-    sub_filter 'github.com' 'repos.devopsnerds.com';
-    sub_filter_once off;
-    sub_filter_types *;
-}
+proxy_pass https://github.com/YOUR-USERNAME/$repo$path;
 ```
 
-2. Update the root location to list the new repo:
+And update the sub_filter:
 ```nginx
-location = / {
-    return 200 "Available repos:\n- /aws-creds-manager\n- /mongo\n- /new-repo\n";
-    add_header Content-Type text/plain;
-}
-```
-
-3. Rebuild and restart:
-```bash
-docker rm -f multi-repo-proxy
-docker build -t multi-repo-proxy .
-docker run -d -p 9080:80 -p 9443:443 --name multi-repo-proxy multi-repo-proxy
+sub_filter 'github.com/YOUR-USERNAME/' 'repos.devopsnerds.com/';
 ```
 
 ## Validation
